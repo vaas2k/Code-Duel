@@ -1,0 +1,21 @@
+
+Auth
+- implement resend code for email verification [-]
+
+Profile
+- hide solution
+
+Winning Scenerioes
+- in case of user getting a problem which is already solved by him previously  
+    - rating will increase only if user solve it iwth solution better then before in terms of time and space Complexity
+
+Match
+- restrict players from tab switching or refreshing 
+
+
+Problem 
+- test admin added problems along testcases in a match 
+
+Admin
+- implement user sessions and tracking 
+
