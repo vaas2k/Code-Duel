@@ -9,7 +9,7 @@ Two players. One problem. A live code editor, hidden test cases, and an Elo rati
 ## Table of Contents
 
 - [Overview](#overview)
-- [Features](#features)
+- [Modules](#modules)
 - [System Architecture](#system-architecture)
 - [Tech Stack](#tech-stack)
 - [Database Schema](#database-schema)
@@ -30,14 +30,22 @@ Coding Duel is a competitive programming platform where players are matched in r
 
 ---
 
-## Features
+## Modules
 
-### Core Gameplay
-- **Real-time 1v1 duels** — matched via Elo-bucketed Redis queues with live opponent status via WebSockets
-- **Elo rating system** — ratings update dynamically after every match (win, loss, draw, surrender, time-expiry)
-- **Problem assignment engine** — problems are filtered by Elo bucket (easy / medium / hard) and deduplicated against the player's last 24 hours of match history
-- **In-browser code editor** — Monaco Editor with multi-language support, syntax highlighting, and familiar LeetCode-style layout
-- **Live test case results** — code is executed against hidden test cases via Judge0; results stream back to both players via WebSocket
+The platform is organized into 12 modules:
+
+1. **User Registration & Authentication** — account creation, secure sign-in, email OTP verification, password reset, session management
+2. **Real-Time Matchmaking** — Elo-bucketed Redis queues pair players instantly based on rating range
+3. **Elo Rating System** — dynamic rating updates after every match (win, loss, draw, surrender, time-expiry)
+4. **Problem Assignment Engine** — problems filtered by Elo bucket (easy / medium / hard) and deduplicated against the player's last 24 hours of match history
+5. **In-Browser Code Editor** — Monaco Editor with multi-language support, syntax highlighting, and familiar LeetCode-style layout
+6. **Test Case Validation** — code executed against hidden test cases via Judge0; results categorized as AC / WA / RTE / CTE / TLE
+7. **Live Game Updates** — real-time progress, scores, and results pushed via WebSockets to both players
+8. **Duel History & Replay Viewer** — all match data, code submissions, and results persisted and reviewable
+9. **Leaderboard Management** — global and seasonal rankings with skill and region filters
+10. **Admin Dashboard** — full CRUD over users, problems, test cases, matches, and platform activity
+11. **Feedback & Support System** — user inquiries and bug reports routed to the admin module with resolution tracking
+12. **Notification & Activity System** — real-time in-app alerts plus a persisted activity feed; see breakdown below
 
 ### Win Conditions
 | Scenario | Outcome |
@@ -47,11 +55,27 @@ Coding Duel is a competitive programming platform where players are matched in r
 | Player surrenders | Opponent wins; both Elos update accordingly |
 | Match aborted (mutual) | No Elo change |
 
-### Platform Features
-- **Duel history & replay viewer** — all match data, code submissions, and results are persisted
-- **Global leaderboard** — ranked by Elo with seasonal resets
-- **Marathon Mode** — solve as many problems as possible under a fixed time window; ranked by volume
-- **Admin dashboard** — full CRUD over users, problems, test cases, matches, and feedback
+### Marathon Mode
+A timed challenge mode where players solve as many problems as possible within a fixed window. Ranked by volume on a dedicated leaderboard with seasonal resets.
+
+### Module 11 — Feedback & Support System
+
+| Feature | Description |
+|---|---|
+| Feedback submission | Users submit issue type, title, description, and severity, with optional anonymous toggle and screenshot attachment |
+| Admin feedback queue | Admins view all submissions filtered by severity, type, or resolution status |
+| Resolution tracking | Admins mark feedback resolved; resolved/unresolved counts surface on the admin stats dashboard |
+
+### Module 12 — Notification & Activity System
+
+| Feature | Description |
+|---|---|
+| Real-time in-app notifications | Toast/dropdown alerts for match found, match result, and Elo change, pushed via a per-user WebSocket channel regardless of which page the user is on |
+| Email notifications | Account verified, password reset confirmed, and account banned events trigger emails via the existing SMTP utility |
+| Activity feed | A persisted "Recent Activity" card on the dashboard showing the last 5–10 actions (matches, problems solved, feedback submitted), built from a single query against `match` and `feedbacks` |
+| Notification preferences *(optional)* | A settings toggle to enable/disable email notifications, stored as a boolean column on `users` |
+
+**Distinction:** notifications are ephemeral and real-time (WebSocket-driven, scoped per user); the activity feed is a persisted, queried log shown statically on the dashboard. Both read from existing tables — no new external services required.
 
 ---
 
@@ -180,6 +204,16 @@ Stores marathon session data: `problems` (JSONB array of solved problems), `tota
 ### `feedbacks`
 User-submitted feedback with `issueType`, `severity`, `anonymous` flag, and `resolved` status.
 
+### `notifications` *(new — Module 12)*
+| Column | Type | Notes |
+|---|---|---|
+| `id` | `serial` PK | |
+| `userId` | `uuid` | FK → `users` |
+| `type` | `text` | `match_found` \| `match_won` \| `match_lost` \| `feedback_resolved` \| `account_event` |
+| `title` | `text` | display text |
+| `read` | `boolean` | default `false` |
+| `createdAt` | `timestamp` | `defaultNow()` |
+
 ---
 
 ## Matchmaking Algorithm
@@ -304,6 +338,20 @@ Special cases:
 | POST | `/admin-delete-problem` | Delete problem |
 | POST | `/admin-update_problem` | Update problem |
 | POST | `/admin-add-testCase` | Add test case to problem |
+
+### Feedback routes
+| Method | Endpoint | Description |
+|---|---|---|
+| POST | `/add-feedback` | Submit user feedback |
+| GET | `/admin-feedbacks` | List all feedback (admin) |
+| POST | `/admin-feedback-activity` | Feedback activity log (admin) |
+
+### Notification & activity routes *(new — Module 12)*
+| Method | Endpoint | Description |
+|---|---|---|
+| GET | `/notifications` | Paginated notifications for current user |
+| POST | `/notifications/mark-read` | Mark all notifications as read |
+| GET | `/activity` | Recent activity feed for dashboard |
 
 ---
 
@@ -463,8 +511,8 @@ coding-duel-platform/
 ## Author
 
 **Salman Ahmed Khan**  
-Software Engineer  
-[LinkedIn](https://linkedin.com/in/salsuqe) · [GitHub](https://github.com/vaas2k)
+Software Engineer · SZABIST Islamabad, Class of 2026  
+[LinkedIn](https://linkedin.com/in/your-profile) · [GitHub](https://github.com/your-username)
 
 ---
 
